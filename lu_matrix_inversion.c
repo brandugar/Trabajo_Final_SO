@@ -1,21 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <string.h>
+#include <sys/time.h>
 
-#define N 3 
+double** allocate_matrix(int n) {
+    double** mat = malloc(n * sizeof(double*));
+    for (int i = 0; i < n; i++)
+        mat[i] = calloc(n, sizeof(double));
+    return mat;
+}
 
-// Paso 1: Descomposición LU (sin pivoteo)
-void lu_decomposition(double A[N][N], double L[N][N], double U[N][N]) {
+void free_matrix(double** mat, int n) {
+    for (int i = 0; i < n; i++)
+        free(mat[i]);
+    free(mat);
+}
+
+void lu_decomposition(double** A, double** L, double** U, int N) {
     for (int i = 0; i < N; i++) {
-        // U
         for (int k = i; k < N; k++) {
             double sum = 0.0;
             for (int j = 0; j < i; j++)
                 sum += L[i][j] * U[j][k];
             U[i][k] = A[i][k] - sum;
         }
-
-        // L
         for (int k = i; k < N; k++) {
             if (i == k)
                 L[i][i] = 1.0;
@@ -29,18 +37,15 @@ void lu_decomposition(double A[N][N], double L[N][N], double U[N][N]) {
     }
 }
 
-// Paso 2: Sustitución hacia adelante (Ly = b)
-void forward_substitution(double L[N][N], double b[N], double y[N]) {
+void forward_substitution(double** L, double* b, double* y, int N) {
     for (int i = 0; i < N; i++) {
         y[i] = b[i];
         for (int j = 0; j < i; j++)
             y[i] -= L[i][j] * y[j];
-        // L[i][i] == 1
     }
 }
 
-// Paso 3: Sustitución hacia atrás (Ux = y)
-void backward_substitution(double U[N][N], double y[N], double x[N]) {
+void backward_substitution(double** U, double* y, double* x, int N) {
     for (int i = N - 1; i >= 0; i--) {
         x[i] = y[i];
         for (int j = i + 1; j < N; j++)
@@ -49,25 +54,28 @@ void backward_substitution(double U[N][N], double y[N], double x[N]) {
     }
 }
 
-// Paso 4: Inversión usando LU
-void invert_matrix(double A[N][N], double A_inv[N][N]) {
-    double L[N][N] = {0}, U[N][N] = {0};
-    lu_decomposition(A, L, U);
-
+void invert_matrix(double** A, double** A_inv, int N) {
+    double** L = allocate_matrix(N);
+    double** U = allocate_matrix(N);
+    lu_decomposition(A, L, U, N);
     for (int i = 0; i < N; i++) {
-        double e[N] = {0}, y[N], x[N];
+        double* e = calloc(N, sizeof(double));
+        double* y = malloc(N * sizeof(double));
+        double* x = malloc(N * sizeof(double));
         e[i] = 1.0;
-
-        forward_substitution(L, e, y);
-        backward_substitution(U, y, x);
-
+        forward_substitution(L, e, y, N);
+        backward_substitution(U, y, x, N);
         for (int j = 0; j < N; j++)
-            A_inv[j][i] = x[j];  // Columna i
+            A_inv[j][i] = x[j];
+        free(e);
+        free(y);
+        free(x);
     }
+    free_matrix(L, N);
+    free_matrix(U, N);
 }
 
-// Utilidad: imprimir una matriz
-void print_matrix(double M[N][N]) {
+void print_matrix(double** M, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++)
             printf("%8.4f ", M[i][j]);
@@ -75,18 +83,100 @@ void print_matrix(double M[N][N]) {
     }
 }
 
-int main() {
-    double A[N][N] = {
-        {4, 3, 2},
-        {2, 1, 1},
-        {6, 7, 5}
-    };
+int contar_columnas(const char* linea) {
+    int count = 1;
+    for (const char* p = linea; *p; p++)
+        if (*p == ',') count++;
+    return count;
+}
 
-    double A_inv[N][N];
-    invert_matrix(A, A_inv);
+double** leer_csv(const char* filename, int* N_out) {
+    FILE* fp = fopen(filename, "r");
+    if (!fp) {
+        perror("Error abriendo el archivo");
+        return NULL;
+    }
+
+    char* line = malloc(32768);
+    int filas = 0, N = 0;
+
+    // Leer primera línea
+    if (!fgets(line, 32768, fp)) {
+        fprintf(stderr, "Archivo vacío\n");
+        fclose(fp);
+        free(line);
+        return NULL;
+    }
+
+    N = contar_columnas(line);
+    double** A = allocate_matrix(N);
+
+    // Procesar primera fila
+    int col = 0;
+    char* token = strtok(line, ",\n");
+    while (token && col < N)
+        A[0][col++] = atof(token), token = strtok(NULL, ",\n");
+
+    if (col != N) {
+        fprintf(stderr, "Error: columnas incorrectas en fila 0\n");
+        fclose(fp);
+        free_matrix(A, N);
+        free(line);
+        return NULL;
+    }
+
+    filas = 1;
+
+    // Leer el resto
+    while (fgets(line, 32768, fp) && filas < N) {
+        col = 0;
+        token = strtok(line, ",\n");
+        while (token && col < N)
+            A[filas][col++] = atof(token), token = strtok(NULL, ",\n");
+        if (col != N) {
+            fprintf(stderr, "Error: columnas incorrectas en fila %d\n", filas);
+            fclose(fp);
+            free_matrix(A, N);
+            free(line);
+            return NULL;
+        }
+        filas++;
+    }
+
+    fclose(fp);
+    free(line);
+
+    if (filas != N) {
+        fprintf(stderr, "Error: filas insuficientes\n");
+        free_matrix(A, N);
+        return NULL;
+    }
+
+    *N_out = N;
+    return A;
+}
+
+int main() {
+    int N;
+    double** A = leer_csv("matriz.csv", &N);
+    if (!A) return 1;
+
+    double** A_inv = allocate_matrix(N);
+
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+
+    invert_matrix(A, A_inv, N);
+
+    gettimeofday(&end, NULL);
+    double t = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
 
     printf("Matriz inversa A^-1:\n");
-    print_matrix(A_inv);
+    print_matrix(A_inv, N);
+    printf("\nTiempo de ejecución: %.6f segundos\n", t);
 
+    free_matrix(A, N);
+    free_matrix(A_inv, N);
     return 0;
 }
+
