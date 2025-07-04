@@ -1,6 +1,7 @@
 import numpy as np
 import csv
 from numba import njit, prange
+import time
 
 
 @njit(parallel=True)
@@ -37,11 +38,14 @@ def leer_matriz_desde_csv(nombre_archivo):
 
 
 # Uso del programa
-nombre_archivo = '../../matrices/matriz_10x10_invertible.csv'
+nombre_archivo = '../../matrices/matriz_5000x5000_invertible.csv'
 A = leer_matriz_desde_csv(nombre_archivo)
-print("Matriz original:")
-print(A)
+# print("Matriz original:")
+# print(A)
 
+inicio = time.time()
 inv_A = gauss_jordan_inverse_numba(A)
-print("Inversa por Gauss-Jordan:")
-print(inv_A)
+fin = time.time()
+print(f"Tiempo de ejecución: {fin - inicio:.6f} segundos")
+# print("Inversa por Gauss-Jordan:")
+# print(inv_A)
