@@ -1,4 +1,6 @@
 import numpy as np
+import time
+import csv
 
 
 def gauss_jordan_inverse(A):
@@ -24,8 +26,22 @@ def gauss_jordan_inverse(A):
     return AI[:, n:]  # Retornar la parte derecha: la inversa
 
 
-# Ejemplo de uso
-A = np.array([[2, 1], [5, 3]], dtype=float)
+def leer_matriz_desde_csv(nombre_archivo):
+    with open(nombre_archivo, 'r') as archivo:
+        lector = csv.reader(archivo)
+        matriz = [list(map(float, fila)) for fila in lector]
+    return np.array(matriz)
+
+
+# Uso del programa
+nombre_archivo = '../../matrices/matriz_5000x5000_invertible.csv'
+A = leer_matriz_desde_csv(nombre_archivo)
+# print("Matriz original:")
+# print(A)
+
+inicio = time.time()
 inv_A = gauss_jordan_inverse(A)
-print("Inversa por Gauss-Jordan:")
-print(inv_A)
+fin = time.time()
+print(f"Tiempo de ejecución: {fin - inicio:.6f} segundos")
+# print("Inversa por Gauss-Jordan:")
+# print(inv_A)
