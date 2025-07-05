@@ -112,7 +112,7 @@ int gauss_jordan_inverse(double** AI, int n) {
 
 int main() {
     // Ajusta la ruta al archivo CSV según sea necesario
-    const char* filename = "../../matrices/matriz_10x10_invertible.csv";
+    const char* filename = "../../matrices/matriz_5000x5000_invertible.csv";
 
     printf("Determinando el tamaño de la matriz desde %s...\n", filename);
     int n = get_matrix_size(filename);
