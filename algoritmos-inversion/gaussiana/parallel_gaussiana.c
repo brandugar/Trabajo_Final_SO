@@ -3,10 +3,9 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#include <pthread.h> // Librería para hilos
+#include <pthread.h> 
 
 // Define el número de hilos que se usarán.
-// Un buen punto de partida es el número de núcleos de tu CPU.
 #define NUM_THREADS 4
 
 #define MAX_LINE_LEN 65536
@@ -21,7 +20,7 @@ typedef struct {
 // --- Variables Globales para la Sincronización ---
 pthread_barrier_t barrier; // Barrera para sincronizar hilos en cada iteración
 
-// (Las funciones get_matrix_size y read_matrix_from_csv permanecen iguales)
+
 int get_matrix_size(const char* filename) {
     FILE* file = fopen(filename, "r");
     if (!file) {
@@ -108,11 +107,13 @@ void* elimination_worker(void* arg) {
 /**
  * @brief Aplica el método de Gauss-Jordan de forma paralela.
  */
+/**
+ * @brief Aplica el método de Gauss-Jordan de forma paralela.
+ */
 int gauss_jordan_parallel(double** AI, int n) {
     pthread_t threads[NUM_THREADS];
     thread_args_t args[NUM_THREADS];
 
-    // LA CORRECCIÓN ESTÁ AQUÍ:
     // Inicializar la barrera para NUM_THREADS (hilos trabajadores) + 1 (hilo principal).
     pthread_barrier_init(&barrier, NULL, NUM_THREADS + 1);
 
@@ -126,12 +127,40 @@ int gauss_jordan_parallel(double** AI, int n) {
 
     // El hilo principal orquesta y realiza los pasos secuenciales
     for (int i = 0; i < n; i++) {
-        // ... (el resto de la función es correcto) ...
+
+
+        // 1. Pivoteo parcial: encontrar la fila con el máximo valor en la columna i
+        int max_row = i;
+        for (int k = i + 1; k < n; k++) {
+            if (fabs(AI[k][i]) > fabs(AI[max_row][i])) {
+                max_row = k;
+            }
+        }
+
+        // Intercambiar la fila actual con la fila del pivote máximo
+        if (i != max_row) {
+            double* temp = AI[i];
+            AI[i] = AI[max_row];
+            AI[max_row] = temp;
+        }
+
+        // Verificar si la matriz es singular
+        if (fabs(AI[i][i]) < 1e-10) {
+            fprintf(stderr, "Error: Matriz detectada como singular en la fila %d.\n", i);
+            return -1; // Indicar fallo
+        }
+
+        // 2. Normalizar la fila pivote
+        double pivot = AI[i][i];
+        for (int j = i; j < 2 * n; j++) {
+            AI[i][j] /= pivot;
+        }
+
         
-        // Sincronización: Liberar a los hilos trabajadores
+        // Sincronización: Liberar a los hilos trabajadores para que hagan la eliminación
         pthread_barrier_wait(&barrier);
 
-        // Sincronización: Esperar a que la eliminación termine
+        // Sincronización: Esperar a que la eliminación de esta iteración termine
         pthread_barrier_wait(&barrier);
     }
 
@@ -145,6 +174,33 @@ int gauss_jordan_parallel(double** AI, int n) {
 
     return 0; // Éxito
 }
+
+
+/**
+ * @brief Imprime la matriz invertida que se encuentra en la mitad derecha de AI.
+ * @param AI La matriz aumentada que ahora contiene [I|A^-1].
+ * @param n La dimensión de la matriz.
+ */
+void print_inverse_matrix(double** AI, int n) {
+    printf("\n--- Matriz Invertida (A^-1) ---\n");
+    // Para no inundar la consola, solo imprimimos hasta 10x10
+    int size_to_print = (n > 10) ? 10 : n;
+
+    for (int i = 0; i < size_to_print; i++) {
+        for (int j = 0; j < size_to_print; j++) {
+            // La matriz inversa (A^-1) está en la mitad derecha de AI, que comienza en la columna 'n'.
+            printf("%9.4f ", AI[i][j + n]);
+        }
+        printf("\n");
+    }
+
+    if (n > 10) {
+        printf("... (mostrando solo la submatriz superior izquierda de 10x10)\n");
+    }
+     printf("---------------------------------------------------\n");
+}
+
+
 
 int main() {
     const char* filename = "../../matrices/matriz_5000x5000_invertible.csv";
@@ -191,6 +247,8 @@ int main() {
         printf("---------------------------------------------------\n");
         printf("Tiempo de ejecución: %f segundos\n", time_spent);
         printf("---------------------------------------------------\n");
+        // IMPRIMIMOS LA MATRIZ INVERTIDA
+        print_inverse_matrix(AI, n);
     }
     
     printf("Liberando memoria...\n");
