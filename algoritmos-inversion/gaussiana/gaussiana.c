@@ -4,7 +4,7 @@
 #include <time.h>
 #include <math.h>
 
-#define MAX_LINE_LEN 65536 // Búfer para leer una línea del CSV (ajustar si las filas son muy largas)
+#define MAX_LINE_LEN 250000 // Búfer para leer una línea del CSV (ajustar si las filas son muy largas)
 
 /**
  * @brief Determina la dimensión N de una matriz NxN desde un archivo CSV.

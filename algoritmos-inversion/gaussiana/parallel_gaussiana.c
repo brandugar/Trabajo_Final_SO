@@ -8,7 +8,7 @@
 // Define el número de hilos que se usarán.
 #define NUM_THREADS 4
 
-#define MAX_LINE_LEN 65536
+#define MAX_LINE_LEN 250000
 
 // --- Estructura para pasar argumentos a los hilos ---
 typedef struct {
@@ -203,7 +203,7 @@ void print_inverse_matrix(double** AI, int n) {
 
 
 int main() {
-    const char* filename = "../../matrices/matriz_5000x5000_invertible.csv";
+    const char* filename = "../../matrices/matriz_1000x1000_invertible.csv";
     
     printf("Usando %d hilos de trabajo.\n", NUM_THREADS);
     printf("Determinando el tamaño de la matriz desde %s...\n", filename);
