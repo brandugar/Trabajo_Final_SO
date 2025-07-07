@@ -6,6 +6,7 @@
 
 #define MAX_N 1024
 #define MAX_LINE 8192
+#define MAX_PATH 256
 
 typedef struct {
     int col;
@@ -160,13 +161,32 @@ void imprimir_matriz(double **M, int N) {
     }
 }
 
-int main() {
-    double **A, **A_inv;
-    int N;
-
-    if (!leer_csv("matriz.csv", &A, &N)) {
-        fprintf(stderr, "Error leyendo matriz desde CSV.\n");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Uso: %s <dimension>\n", argv[0]);
         return 1;
+    }
+
+    int N = atoi(argv[1]);
+    if (N <= 0 || N > MAX_N) {
+        fprintf(stderr, "Error: la dimensión debe ser un entero positivo menor o igual a %d\n", MAX_N);
+        return 1;
+    }
+
+    char ruta_csv[MAX_PATH];
+    snprintf(ruta_csv, MAX_PATH, "../../matrices/matriz_%dx%d_invertible.csv", N, N);
+
+    double **A, **A_inv;
+    int N_leida;
+
+    if (!leer_csv(ruta_csv, &A, &N_leida)) {
+        fprintf(stderr, "Error leyendo matriz desde CSV: %s\n", ruta_csv);
+        return 1;
+    }
+
+    if (N_leida != N) {
+        fprintf(stderr, "Advertencia: la dimensión en el archivo no coincide con la proporcionada.\n");
+        N = N_leida;  // actualiza N para evitar errores posteriores
     }
 
     A_inv = alocar_matriz(N);
@@ -180,8 +200,12 @@ int main() {
 
     double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
 
-    printf("Matriz inversa A^-1:\n");
-    imprimir_matriz(A_inv, N);
+    if (N <= 10) {
+        printf("Matriz inversa A^-1:\n");
+        imprimir_matriz(A_inv, N);
+    } else {
+        printf("Matriz inversa omitida por ser mayor de 10x10\n");
+    }
 
     printf("\nTiempo de ejecución: %.6f segundos\n", elapsed);
 
