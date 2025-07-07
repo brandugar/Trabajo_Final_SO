@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/time.h>
 
+#define MAX_PATH 256
+
 double** allocate_matrix(int n) {
     double** mat = malloc(n * sizeof(double*));
     for (int i = 0; i < n; i++)
@@ -156,9 +158,23 @@ double** leer_csv(const char* filename, int* N_out) {
     return A;
 }
 
-int main() {
-    int N;
-    double** A = leer_csv("matriz.csv", &N);
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Uso: %s <dimension>\n", argv[0]);
+        return 1;
+    }
+
+    int N = atoi(argv[1]);
+    if (N <= 0) {
+        fprintf(stderr, "Error: la dimensión debe ser un entero positivo\n");
+        return 1;
+    }
+
+    // Construir la ruta del archivo
+    char ruta_archivo[MAX_PATH];
+    snprintf(ruta_archivo, MAX_PATH, "../../matrices/matriz_%dx%d_invertible.csv", N, N);
+
+    double** A = leer_csv(ruta_archivo, &N);
     if (!A) return 1;
 
     double** A_inv = allocate_matrix(N);
@@ -179,4 +195,5 @@ int main() {
     free_matrix(A_inv, N);
     return 0;
 }
+
 
