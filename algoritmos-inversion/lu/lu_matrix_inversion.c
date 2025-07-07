@@ -187,8 +187,12 @@ int main(int argc, char* argv[]) {
     gettimeofday(&end, NULL);
     double t = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
 
-    printf("Matriz inversa A^-1:\n");
-    print_matrix(A_inv, N);
+    if (N <= 10) {
+        printf("Matriz inversa A^-1:\n");
+        print_matrix(A_inv, N);
+    } else {
+        printf("Matriz inversa omitida por ser mayor de 10x10\n");
+    }
     printf("\nTiempo de ejecución: %.6f segundos\n", t);
 
     free_matrix(A, N);
